@@ -1,0 +1,73 @@
+getVIF <- function(varLi,dataName){
+  library(reshape)
+  tempDF <- data.frame(matrix(NA,ncol=3,nrow=length(varLi)))
+  tempDF <- rename(tempDF,c(X1="Variable",X2="R2",X3="VIF"))
+  count<-1
+  while(count<=length(varLi)){
+    term <- varLi[count]
+    alreadyEqualed <- FALSE
+    for(i in 1:length(varLi)){
+      if(alreadyEqualed==TRUE & i!=count){
+        term<-paste(term,"+",varLi[i])
+      }
+      if(alreadyEqualed==FALSE & i!=count){
+        term <- paste(term,"~",varLi[i])
+        alreadyEqualed<-TRUE
+      }
+    }
+    #print(paste("The variable being tested is ",varLi[count]))
+    tempDF[count,1]<-varLi[count]
+    temp <- lm(term,data=dataName)
+    ##print(summary(temp))
+    r2 <- summary(temp)$r.squared
+    tempDF[count,2]<-r2
+    tempDF[count,3]<-1/(1-r2)
+    count <- count+1
+  }
+  View(tempDF)
+}
+plotPredictedvActual <- function(model,df,dv){
+  temp <- predict(model,se.f=TRUE)
+  temp$pred <- exp(temp$fit)/(1+exp(temp$fit))
+  temp2 <- merge(df,temp,by="row.names",all.x=TRUE)
+  library(ggplot2)
+  allPlot <- ggplot(temp2,aes(x=year,y=pred,color=factor(eval(parse(text=dv)))))+geom_point()
+  allPlot <- allPlot+ggtitle(dv)
+  allPlot
+}
+
+plotRoc <- function(model,df,dv){
+  data <- eval(parse(text=df))
+  temp <- predict(model)
+  temp2 <- merge(data,temp,by="row.names",all.x=TRUE)
+  temp2$pred <- exp(temp2$y)/(1+exp(temp2$y))
+  library(verification)
+  dat <- roc.plot(eval(parse(text=paste("temp2",dv,sep="$"))),temp2$pred)
+  dat$roc.vol
+}
+
+plotSP <- function(modelName,df,dv){
+  data <- eval(parse(text=df))
+  model <- eval(parse(text=modelName))
+  temp <- predict(model)
+  temp2 <- merge(data,temp,by="row.names",all.x=TRUE)
+  temp2$pred <- exp(temp2$y)/(1+exp(temp2$y))
+  library(separationplot)
+  v1 <- temp2$pred
+  v2 <- eval(parse(text=paste("temp2",dv,sep="$")))
+  separationplot(pred=v1,actual=v2,type="rect",heading=modelName)
+}
+
+checkModSig <- function(modelName){
+  sum <- summary(modelName)
+  devdiff <- sum$null.deviance-sum$deviance
+  dfdiff <- sum$df.null-sum$df.residual
+  print(paste("Probability that model is better than null:",pchisq(abs(devdiff),df=dfdiff,lower.tail=FALSE)))
+  print(paste("Probability that the data generated the model:",pchisq(sum$deviance,sum$df.residual)))
+}
+
+GetHCErrors <- function(model,type){
+  library(sandwich)
+  library(lmtest)
+  return(coeftest(model,vcov=vcovHC(model,type=type)))
+}

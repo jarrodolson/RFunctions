@@ -1,0 +1,1 @@
+These are scripts of functions that are useful and more or less generalized. They are grouped by approximate purpose.
