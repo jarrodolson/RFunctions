@@ -54,6 +54,7 @@ DelayProbability <- function(delays,increment,max){
 
 CleanText <- function(textVector){
   ##print(head(textVector))
+  library(stringr)
   textVector <- str_replace_all(textVector,"  "," ")
   textVector <- str_replace_all(textVector,"http://t.co/[a-z,A-Z,0-9]* ","")
   textVector <- str_replace_all(textVector,"RT @[a-z,A-Z,0-9]* ","")
@@ -62,7 +63,7 @@ CleanText <- function(textVector){
   return(textVector)
 }
 
-CreateWordCloud <- function(tweetVector){
+CreateWordCloud <- function(tweetVector,max=10){
   ##Takes vector of clean text... "tweetVector"
   ##Create corpus using library (tm)
   tweetCorpus <- Corpus((VectorSource(tweetVector)))
@@ -76,7 +77,7 @@ CreateWordCloud <- function(tweetVector){
   tdMatrix <- as.matrix(tweetTDM)
   sortedMatrix <- sort(rowSums(tdMatrix),decreasing=TRUE)
   cloudFrame <- data.frame(word=names(sortedMatrix),freq=sortedMatrix)
-  cloudFrame <- cloudFrame[which(cloudFrame$freq>10),]
+  cloudFrame <- cloudFrame[which(cloudFrame$freq>max),]
   wordcloud(cloudFrame$word,cloudFrame$freq)
 }
 
